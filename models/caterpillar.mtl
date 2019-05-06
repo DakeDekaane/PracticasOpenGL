@@ -1,0 +1,135 @@
+# Max2Mtl Version 4.0 Mar 10th, 2001
+#
+newmtl BLACK_PLASTIC
+Ka  0.2 0.1 0.0
+Kd  0.2 0.2 0.2
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  7.4
+illum 2
+#
+newmtl BLACK_METAL
+Ka  0.2 0.1 0.0
+Kd  0.2 0.2 0.2
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  10.0
+illum 2
+#
+# Multi/Sub BODY_MAPS (6) to come 
+#
+newmtl BODY_MAPS
+Ka  0.3 0.2 0.1
+Kd  1.0 0.6 0.3
+Ks  1.0 1.0 1.0
+d  1.0
+Ns  5.3
+illum 2
+#
+newmtl MAP1
+Ka  0.1 0.1 0.1
+Kd  1.0 0.6 0.3
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  5.3
+illum 2
+#
+newmtl MAP2
+Ka  0.1 0.1 0.1
+Kd  1.0 0.6 0.3
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  5.3
+illum 2
+#
+newmtl MAP3
+Ka  0.1 0.1 0.1
+Kd  1.0 0.6 0.3
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  5.3
+illum 2
+#
+newmtl MAP4
+Ka  0.1 0.1 0.1
+Kd  1.0 0.6 0.3
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  5.3
+illum 2
+#
+newmtl MAP5
+Ka  0.1 0.1 0.1
+Kd  1.0 0.6 0.3
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  5.3
+illum 2
+#
+# Multi/Sub BODY_MAPS done 
+#
+# Multi/Sub Material__85 (2) to come 
+#
+newmtl BLACK_PLASTIC
+Ka  0.2 0.1 0.0
+Kd  0.2 0.2 0.2
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  7.4
+illum 2
+#
+newmtl Material__1
+Ka  0.0 0.0 0.0
+Kd  1.0 0.6 0.3
+Ks  1.0 1.0 1.0
+d  1.0
+Ns  5.3
+illum 2
+#
+# Multi/Sub Material__85 done 
+#
+newmtl CROMED
+Ka  0.2 0.1 0.0
+Kd  0.6 0.6 0.6
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  10.0
+illum 2
+#
+# Multi/Sub MAP_VERT (3) to come 
+#
+newmtl MAP_VERT
+Ka  0.0 0.0 0.0
+Kd  1.0 0.6 0.3
+Ks  1.0 1.0 1.0
+d  1.0
+Ns  5.3
+illum 2
+#
+newmtl Material__83
+Ka  0.1 0.1 0.1
+Kd  1.0 0.6 0.3
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  5.3
+illum 2
+#
+newmtl Material__84
+Ka  0.1 0.1 0.1
+Kd  1.0 0.6 0.3
+Ks  0.9 0.9 0.9
+d  1.0
+Ns  5.3
+illum 2
+#
+# Multi/Sub MAP_VERT done 
+#
+newmtl Material__1
+Ka  0.0 0.0 0.0
+Kd  1.0 0.6 0.3
+Ks  1.0 1.0 1.0
+d  1.0
+Ns  5.3
+illum 2
+#
+# EOF
