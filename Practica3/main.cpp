@@ -14,7 +14,6 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 
 
@@ -58,8 +57,8 @@ glm::vec3 terrain_vertices[] = {
 };
 
 enum {
-	TERRAIN,
 	FREE,
+	TERRAIN,
 	TOPDOWN
 };
 int camera_index = 0;
@@ -103,8 +102,7 @@ int main() {
 	glfwMakeContextCurrent(window);
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 	glfwSetCursorPosCallback(window, mouse_callback);
-	glfwSetScrollCallback(window, scroll_callback);
-
+	
 	//Mouse mode
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
@@ -178,10 +176,10 @@ int main() {
 		glm::mat4 view = glm::mat4(1.0f);
 
 		switch (camera_index) {
-			case TERRAIN: 
+			case FREE: 
 				view = glm::lookAt(cameraPosT, cameraPosT + cameraFrontT, cameraUpT);
 				break;
-			case FREE:
+			case TERRAIN:
 				view = glm::lookAt(cameraPosF, cameraPosF + cameraFrontF, cameraUpT);
 				break;
 			case TOPDOWN:
@@ -226,72 +224,76 @@ void processInput(GLFWwindow *window)
 		glfwSetWindowShouldClose(window, true);
 
 	if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) 
-		camera_index = TERRAIN;
-	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
 		camera_index = FREE;
+	if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+		camera_index = TERRAIN;
 	if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
 		camera_index = TOPDOWN;
 	
 
 	float cameraSpeed = 2.5 * deltaTime;
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		if (camera_index == TERRAIN )
+		if (camera_index == FREE)
 			cameraPosT += cameraSpeed * cameraFrontT;
-		//else if (camera_index == FREE) 
-			//Free camera 
+		//else if (camera_index == TERRAIN) 
+			//Terrain camera 
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		if (camera_index == TERRAIN)
+		if (camera_index == FREE)
 			cameraPosT -= cameraSpeed * cameraFrontT;
-		//else if (camera_index == FREE)
-			//Free camera 
+		//else if (camera_index == TERRAIN)
+			//Terrain camera 
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		if (camera_index == TERRAIN)
+		if (camera_index == FREE)
 			cameraPosT -= glm::normalize(glm::cross(cameraFrontT, cameraUpT)) * cameraSpeed;
-		//else if (camera_index == FREE)
-			//Free camera 
+		//else if (camera_index == TERRAIN)
+			//Terrain camera 
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		if (camera_index == TERRAIN)	
+		if (camera_index == FREE)	
 			cameraPosT += glm::normalize(glm::cross(cameraFrontT, cameraUpT)) * cameraSpeed;
-		//else if (camera_index == FREE)
-			//Free camera
+		//else if (camera_index == TERRAIN)
+			//Terrain camera
 }
 
 // glfw: whenever the mouse moves, this callback is called
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (firstMouse)
-	{
+	if (camera_index == FREE) {
+		if (firstMouse)
+		{
+			lastX = xpos;
+			lastY = ypos;
+			std::cout << "x: " << xpos << std::endl;
+			std::cout << "y: " << ypos << std::endl;
+			firstMouse = false;
+		}
+
+		float xoffset = xpos - lastX;
+		float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
 		lastX = xpos;
 		lastY = ypos;
-		std::cout << "x: " << xpos << std::endl;
-		std::cout << "y: " << ypos << std::endl;
-		firstMouse = false;
+
+		float sensitivity = 0.1f; // change this value to your liking
+		xoffset *= sensitivity;
+		yoffset *= sensitivity;
+
+		yaw += xoffset;
+		pitch += yoffset;
+
+		// make sure that when pitch is out of bounds, screen doesn't get flipped
+		if (pitch > 89.0f)
+			pitch = 89.0f;
+		if (pitch < -89.0f)
+			pitch = -89.0f;
+
+		glm::vec3 front;
+		front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+		front.y = sin(glm::radians(pitch));
+		front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	
+		cameraFrontT = glm::normalize(front);
 	}
-
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-	lastX = xpos;
-	lastY = ypos;
-
-	float sensitivity = 0.1f; // change this value to your liking
-	xoffset *= sensitivity;
-	yoffset *= sensitivity;
-
-	yaw += xoffset;
-	pitch += yoffset;
-
-	// make sure that when pitch is out of bounds, screen doesn't get flipped
-	if (pitch > 89.0f)
-		pitch = 89.0f;
-	if (pitch < -89.0f)
-		pitch = -89.0f;
-
-	glm::vec3 front;
-	front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-	front.y = sin(glm::radians(pitch));
-	front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-	cameraFrontT = glm::normalize(front);
+	
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -301,14 +303,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 	// make sure the viewport matches the new window dimensions; note that width and 
 	// height will be significantly larger than specified on retina displays.
 	glViewport(0, 0, width, height);
-}
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-	if (fov >= 1.0f && fov <= 45.0f)
-		fov -= yoffset;
-	if (fov <= 1.0f)
-		fov = 1.0f;
-	if (fov >= 45.0f)
-		fov = 45.0f;
 }
