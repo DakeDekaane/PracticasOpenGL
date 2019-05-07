@@ -33,12 +33,12 @@ float lastFrame = 0.0f;
 int main() {
 
 	std::string file_name;
-	
+
 	while (file_name != "exit") {
-		
+
 		//Initialize wire mode
 		wireMode = false;
-		
+
 		//Initialize camera
 		cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 		cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -46,7 +46,7 @@ int main() {
 
 		std::cout << "Ingrese \"exit\" para salir. \nIngrese el nombre del modelo a cargar (incluir extension .obj): ";
 		std::cin >> file_name;
-	
+
 		//Break main loop
 		if (file_name == "exit") {
 			break;
@@ -63,7 +63,7 @@ int main() {
 		//Getting vertices and indices vectors
 		std::vector<glm::vec3> vertices = loader.getVertices();
 		std::vector<unsigned int> indices = loader.getFaces();
-		
+
 		// glfw: initialize and configure
 		// ------------------------------
 		glfwInit();
@@ -115,7 +115,7 @@ int main() {
 
 		ourShader.use();
 		glm::mat4 projection = glm::perspective(glm::radians(75.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 500.0f);
-		ourShader.setMat4("projection", projection); 
+		ourShader.setMat4("projection", projection);
 
 		// render loop
 		// -----------
@@ -129,7 +129,7 @@ int main() {
 			else {
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			}
-			
+
 			// per-frame time logic
 			// --------------------
 			float currentFrame = glfwGetTime();
@@ -144,7 +144,7 @@ int main() {
 			glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
 
-			// activate shader
+																// activate shader
 			ourShader.use();
 
 			// camera/view transformation
@@ -186,7 +186,7 @@ void processInput(GLFWwindow *window)
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
 
-	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) 
+	if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
 		wireMode = false;
 	if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
 		wireMode = true;

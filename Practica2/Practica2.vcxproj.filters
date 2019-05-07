@@ -43,5 +43,8 @@
     <None Include="vertex.vs">
       <Filter>Archivos de recursos</Filter>
     </None>
+    <None Include="vertex_terrain.vs">
+      <Filter>Archivos de recursos</Filter>
+    </None>
   </ItemGroup>
 </Project>
