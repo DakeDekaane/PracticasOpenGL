@@ -5,36 +5,31 @@
 #include <glm/gtc/type_ptr.hpp>
 
 struct FaceVertex {
-	int position;
-	int texture;
-	int normal;
+	unsigned int position;
+	unsigned int normal;
+	unsigned int texture;
 };
 
-struct Face {
-	FaceVertex vertex1;
-	FaceVertex vertex2;
-	FaceVertex vertex3;
-	FaceVertex vertex4;
-};
-
-
-class OBJLoader{
-private:
+class OBJLoader {
 	std::string file_path;
-	std::vector<glm::vec3> vertices;
-	std::vector<unsigned int> faces;
-	bool file;
+	std::vector<glm::vec3> position_vertices;
+	std::vector<glm::vec3> normal_vertices;
+	std::vector<glm::vec3> texture_vertices;
+	std::vector<unsigned int> faces_indices;
+	bool fileSet;
+	unsigned int VAO;
+	unsigned int VBO;
+	unsigned int EBO;
+	glm::vec3 max, min;
+	
 	FaceVertex getFaceVertex(std::string data);
-	float* vertexArray;
-	unsigned int* indexArray;
+	bool parseFile();
 
 public:
 	OBJLoader();
-	void setFile(std::string file_path);
-	std::string getFile();
-	bool parseFile();
-	std::vector<glm::vec3> getVertices();
-	std::vector<unsigned int> getFaces();
-	float* getVertexArray();
-	unsigned int* getIndexArray();
+	OBJLoader(std::string file_path);
+	bool setFile(std::string file_path);
+	bool load();
+	void render();
+	~OBJLoader();
 };

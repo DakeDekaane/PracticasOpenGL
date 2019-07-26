@@ -12,27 +12,31 @@
 
 #include <iostream>
 
+//Callback prototypes
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 
-// settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+// Window settings
+const unsigned int screenWidth = 800;
+const unsigned int screenHeight = 600;
 
-bool wireMode = false;
-
-//camera
+// Camera vectors
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-// timing
+// Timing
 float deltaTime = 0.0f;	// time between current frame and last frame
 float lastFrame = 0.0f;
 
-int main() {
+// Wire mode setting
+bool wireMode = false;
 
+int main() {
+	
+	//OBJ file variables
 	std::string file_name;
+	OBJLoader loader;
 
 	while (file_name != "exit") {
 
@@ -44,6 +48,7 @@ int main() {
 		cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 		cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
+		//OBJ file input
 		std::cout << "Ingrese \"exit\" para salir. \nIngrese el nombre del modelo a cargar (incluir extension .obj): ";
 		std::cin >> file_name;
 
@@ -52,29 +57,20 @@ int main() {
 			break;
 		}
 
-		//Loading obj file
-		OBJLoader loader;
-		loader.setFile("../models/" + file_name);
-		if (!loader.parseFile()) {
-			std::cout << "Error opening file" << loader.getFile() << "\n";
+		//Validating existing OBJ file
+		if (!loader.setFile("../models/" + file_name)) {
 			continue;
 		}
 
-		//Getting vertices and indices vectors
-		std::vector<glm::vec3> vertices = loader.getVertices();
-		std::vector<unsigned int> indices = loader.getFaces();
-
-		// glfw: initialize and configure
-		// ------------------------------
+		// Initialize and configure GLFW
 		glfwInit();
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-		// glfw window creation
-		// --------------------
-		GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-		if (window == NULL) {
+		// Create GLFW Window
+		GLFWwindow* window = glfwCreateWindow(screenWidth, screenHeight, "Model Viewer", NULL, NULL);
+		if (window == nullptr) {
 			std::cout << "Failed to create GLFW window" << std::endl;
 			glfwTerminate();
 			return -1;
@@ -82,47 +78,33 @@ int main() {
 		glfwMakeContextCurrent(window);
 		glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
-		// glad: load all OpenGL function pointers
-		// ---------------------------------------
+		// Load OpenGL function pointers (GLAD)
 		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 			std::cout << "Failed to initialize GLAD" << std::endl;
-			return -1;
+			return -2;
 		}
 
-		// configure global opengl state
-		// -----------------------------
+		// Configure global OpenGL state
 		glEnable(GL_DEPTH_TEST);
 
-		// build and compile our shader zprogram
-		// ------------------------------------
+		// Build and compile shaders
 		Shader ourShader("vertex.vs", "fragment.fs");
 
-		unsigned int VBO, VAO, EBO;
-		glGenVertexArrays(1, &VAO);
-		glGenBuffers(1, &VBO);
-		glGenBuffers(1, &EBO);
+		// Load OBJ file
+		if (!loader.load()) {
+			continue;
+		}
 
-		glBindVertexArray(VAO);
-
-		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_STATIC_DRAW);
-
-		// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(0);
-
+		// Projection matrix
 		ourShader.use();
-		glm::mat4 projection = glm::perspective(glm::radians(75.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 500.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(75.0f), (float)screenWidth / (float)screenHeight, 0.1f, 500.0f);
 		ourShader.setMat4("projection", projection);
 
-		// render loop
-		// -----------
+		// Render loop
 		while (!glfwWindowShouldClose(window))
 		{
 
-			//wire mode
+			//Wire mode enable/disable
 			if (wireMode) {
 				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 			}
@@ -130,48 +112,37 @@ int main() {
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			}
 
-			// per-frame time logic
-			// --------------------
+			// Time logic
 			float currentFrame = glfwGetTime();
 			deltaTime = currentFrame - lastFrame;
 			lastFrame = currentFrame;
-			// input
-			// -----
+			
+			// Input
 			processInput(window);
 
-			// render
-			// ------
+			// Render
 			glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-																// activate shader
+			// Enable shader
 			ourShader.use();
 
-			// camera/view transformation
+			// Camera transformation (View matrix)
 			glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 			ourShader.setMat4("view", view);
 
-			// render VAO
-			glBindVertexArray(VAO);
+			// Render OBJ model (Model matrix)
 			glm::mat4 model = glm::mat4(1.0f);
 			model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
 			ourShader.setMat4("model", model);
-			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-			glBindVertexArray(0);
+			loader.render();
 
-			// glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-			// -------------------------------------------------------------------------------
+			// Swap buffers and poll events (I/O)
 			glfwSwapBuffers(window);
 			glfwPollEvents();
 		}
 
-		// optional: de-allocate all resources once they've outlived their purpose:
-		// ------------------------------------------------------------------------
-		glDeleteVertexArrays(1, &VAO);
-		glDeleteBuffers(1, &VBO);
-
-		// glfw: terminate, clearing all previously allocated GLFW resources.
-		// ------------------------------------------------------------------
+		// Clear GLFW resources
 		glfwTerminate();
 
 	}
@@ -179,8 +150,7 @@ int main() {
 	return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ----------------------------------deltaT-----------------------------------------------------------------------
+// Keyboard processing
 void processInput(GLFWwindow *window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -206,11 +176,9 @@ void processInput(GLFWwindow *window)
 		cameraPos -= cameraSpeed * cameraUp;
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
+// Resize callback
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-	// make sure the viewport matches the new window dimensions; note that width and 
-	// height will be significantly larger than specified on retina displays.
+	//Adjust viewport
 	glViewport(0, 0, width, height);
 }

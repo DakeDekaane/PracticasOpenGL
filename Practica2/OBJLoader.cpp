@@ -1,3 +1,5 @@
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -5,34 +7,58 @@
 #include <cstdlib>
 #include "OBJLoader.h"
 
-OBJLoader::OBJLoader(): file(false) {
+OBJLoader::OBJLoader(): fileSet(false) {
 }
 
-void OBJLoader::setFile(std::string file_path){
-	if(!file) {
-		this->file_path = file_path;
-		file = true;
+OBJLoader::OBJLoader(std::string file_path) : file_path(file_path), fileSet(true) {
+}
+
+bool OBJLoader::setFile(std::string file_path){
+	//File already loaded (so we don't load the same data twice)
+	if (fileSet && this->file_path == file_path) {
+		return true;
 	}
-}
 
-std::string OBJLoader::getFile() {
-	return file_path;
+	//If new file, validate it
+	std::ifstream file(file_path.c_str());
+	bool success = !file.fail();
+	
+	//Clearing data for new file
+	position_vertices.clear();
+	normal_vertices.clear();
+	texture_vertices.clear();
+	faces_indices.clear();
+
+	//Set the file path
+	this->file_path = file_path;
+	if (!fileSet && success) {
+		fileSet = true;
+	}
+	return success;
 }
 
 bool OBJLoader::parseFile(){
+	//File has not been set
+	if (!fileSet) {
+		std::cout << "File has not been set." << std::endl;
+		return false;
+	}
+
+	//Needed variables
 	std::ifstream file(file_path.c_str());
 	std::string line;
 	std::string flag;
-	std::string v1,v2,v3,v4;
-	float x,y,z;
+	std::vector<std::string> vertices_strings;
+	FaceVertex tmp_face_1, tmp_face_2, tmp_face_3;
+	std::string tmp_string_1, tmp_string_2, tmp_string_3, tmp_string_ex;
+	glm::vec3 position_v, normal_v, texture_v;
 	int vertex_index = 0;
 	int vertex_normal_index = 0;
 	int vertex_texture_index = 0;
 	
-	glm::vec3 vertex;
-	FaceVertex face_vertex1,face_vertex2,face_vertex3,face_vertex4;
-	
-	if(!file.is_open()){
+	//Actual parsing
+	if(file.fail()) {
+		std::cout << "File " + file_path + " could not be opened." << std::endl;
 		return false;
 	}
 	while(std::getline(file,line)) {
@@ -43,62 +69,63 @@ bool OBJLoader::parseFile(){
 		}
 		if(flag == "g "){
     		std::istringstream data(line.substr(2));
-    		data >> x >> y >> z;
+    		//data >> x >> y >> z;
     		//std::cout << "Group found: " << data.str() << "\n";
     	}
     	if(flag == "v "){
     		std::istringstream data(line.substr(2));
-    		data >> vertex.x >> vertex.y >> vertex.z;
+    		data >> position_v.x >> position_v.y >> position_v.z;
     		//std::cout << "Vertex " << vertex_index++ << " found: " << vertex.x << "," << vertex.y << "," << vertex.z << "\n";
-    		vertices.push_back(vertex);
+			position_vertices.push_back(position_v);
     	}
     	flag = line.substr(0,3);
     	if(flag == "vn "){
     		std::istringstream data(line.substr(3));
-    		data >> x >> y >> z;
+    		data >> normal_v.x >> normal_v.y >> normal_v.z;
     		//std::cout << "Normal vertex " << vertex_normal_index++ << " found: " << x << "," << y << "," << z << "\n";
+			normal_vertices.push_back(normal_v);
     	}
+		if (flag == "vt ") {
+			std::istringstream data(line.substr(3));
+			data >> texture_v.x >> texture_v.y >> texture_v.z;
+			//std::cout << "Normal vertex " << vertex_normal_index++ << " found: " << x << "," << y << "," << z << "\n";
+			texture_vertices.push_back(texture_v);
+		}
     	flag = line.substr(0,2);
     	if(flag == "f "){
     		std::istringstream data(line.substr(2));
-    		data >> v1 >> v2 >> v3 >> v4;
+			//Considering non-triangular faces:
+			//Getting the first triangle
+			data >> tmp_string_1 >> tmp_string_2 >> tmp_string_3;
     		//std::cout << "Face found: " << v1 << "," << v2 << "," << v3 << "," << v4 << "\n";
-			face_vertex1 = getFaceVertex(v1);
+			tmp_face_1 = getFaceVertex(tmp_string_1);
 			//std::cout << "\t1. Pos: " << --face_vertex1.position << "\tTex: " << face_vertex1.texture << "\tNor: " << face_vertex1.normal << "\n";
 			//std::cout << "\t1. Pos: " << face_vertex1.position << "\tTex: " << face_vertex1.texture << "\tNor: " << face_vertex1.normal << "\n";
-			face_vertex2 = getFaceVertex(v2);
+			tmp_face_2 = getFaceVertex(tmp_string_2);
 			//std::cout << "\t2. Pos: " << --face_vertex2.position << "\tTex: " << face_vertex2.texture << "\tNor: " << face_vertex2.normal << "\n";
 			//std::cout << "\t2. Pos: " << face_vertex2.position << "\tTex: " << face_vertex2.texture << "\tNor: " << face_vertex2.normal << "\n";
-			face_vertex3 = getFaceVertex(v3);
+			tmp_face_3 = getFaceVertex(tmp_string_3);
 			//std::cout << "\t3. Pos: " << --face_vertex3.position << "\tTex: " << face_vertex3.texture << "\tNor: " << face_vertex3.normal << "\n";
 			//std::cout << "\t3. Pos: " << face_vertex3.position << "\tTex: " << face_vertex3.texture << "\tNor: " << face_vertex3.normal << "\n";
-			face_vertex4 = getFaceVertex(v4);
-			//std::cout << "\t4. Pos: " << --face_vertex4.position << "\tTex: " << face_vertex4.texture << "\tNor: " << face_vertex4.normal << "\n";
-			//std::cout << "\t4. Pos: " << face_vertex4.position << "\tTex: " << face_vertex4.texture << "\tNor: " << face_vertex4.normal << "\n";
-			--face_vertex1.position;
-			--face_vertex2.position;
-			--face_vertex3.position;
-			--face_vertex4.position;
-			if (face_vertex4.position != -1 ) {
-				faces.push_back(face_vertex1.position);
-				faces.push_back(face_vertex2.position);
-				faces.push_back(face_vertex4.position);
-				faces.push_back(face_vertex2.position);
-				faces.push_back(face_vertex3.position);
-				faces.push_back(face_vertex4.position);
+			
+			//Adjusting indices and pushing into indices array for EBO
+			--tmp_face_1.position;
+			--tmp_face_2.position;
+			--tmp_face_3.position;
+			faces_indices.push_back(tmp_face_1.position);
+			faces_indices.push_back(tmp_face_2.position);
+			faces_indices.push_back(tmp_face_3.position);
+
+			//Getting the rest of vertices, implementing a triangle fan, and pushing the rest of indices
+			while (data >> tmp_string_ex) {
+				tmp_face_2 = tmp_face_3;
+				tmp_face_3 = getFaceVertex(tmp_string_ex);
+				--tmp_face_3.position;
+				faces_indices.push_back(tmp_face_1.position);
+				faces_indices.push_back(tmp_face_2.position);
+				faces_indices.push_back(tmp_face_3.position);
 			}
-			else {
-				faces.push_back(face_vertex1.position);
-				faces.push_back(face_vertex2.position);
-				faces.push_back(face_vertex3.position);
-			}
-    	}
-    	flag = line.substr(0,3);
-    	if(flag == "vt "){
-    		std::istringstream data(line.substr(3));
-    		data >> x >> y >> z;
-    		//std::cout << "Texture vertex " << vertex_texture_index++ << " found: " << x << "," << y << "," << z << "\n";
-    	}
+		}
     }
 	file.close();
 	return true;
@@ -114,6 +141,8 @@ FaceVertex OBJLoader::getFaceVertex(std::string data){
 	std::string buffer_normal = "";
 	int index = 0;
 	char c = data[index];
+	
+	//Parsing the face vertex data to get corresponding position, normal, and texture vertices indices
 	while(c != '\0') {
 		if(isdigit(c) && !position) {
 			buffer_position += c;
@@ -143,24 +172,40 @@ FaceVertex OBJLoader::getFaceVertex(std::string data){
 	return value;
 }
 
-std::vector<glm::vec3> OBJLoader::getVertices() {
-	return vertices;
-}
-
-std::vector<unsigned int> OBJLoader::getFaces(){
-	return faces;
-}
-
-float* OBJLoader::getVertexArray(){
-	vertexArray = new float[vertices.size()*3];
-	for(int i = 0; i < vertices.size(); i++) {
-		vertexArray[3*i] = vertices[i].x;
-		vertexArray[3*i+1] = vertices[i].y;
-		vertexArray[3*i+2] = vertices[i].z;
+bool OBJLoader::load() {
+	// First we parse the set file
+	bool success = parseFile();
+	if (!success) {
+		return success;
 	}
-	return vertexArray;
+
+	//Generate and bind VBO, VAO and EBO
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+
+	glBindVertexArray(VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, position_vertices.size() * sizeof(glm::vec3), &position_vertices[0], GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, faces_indices.size() * sizeof(unsigned int), &faces_indices[0], GL_STATIC_DRAW);
+
+	// Position attribute in VBO
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
+	return success;
 }
 
-unsigned int* OBJLoader::getIndexArray(){
-	return &faces[0];
+void OBJLoader::render() {
+	//Render VAO
+	glBindVertexArray(VAO);
+	glDrawElements(GL_TRIANGLES, faces_indices.size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
+}
+
+OBJLoader::~OBJLoader() {
+	// Deallocate resources (VAO,VBO)
+	glDeleteVertexArrays(1, &VAO);
+	glDeleteBuffers(1, &VBO);
 }
