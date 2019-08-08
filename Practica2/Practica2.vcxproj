@@ -123,12 +123,12 @@
   <ItemGroup>
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="OBJLoader.cpp" />
+    <ClCompile Include="OBJModel.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Shader.h" />
-    <ClInclude Include="OBJLoader.h" />
+    <ClInclude Include="OBJModel.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="fragment.fs" />

@@ -5,16 +5,16 @@
 #include <sstream>
 #include <cctype>
 #include <cstdlib>
-#include "OBJLoader.h"
+#include "OBJModel.h"
 
-OBJLoader::OBJLoader(): fileSet(false) {
+OBJModel::OBJModel(): fileSet(false), mtlExists(false) {
 }
 
-OBJLoader::OBJLoader(std::string file_path) : file_path(file_path), fileSet(true) {
+OBJModel::OBJModel(std::string file_path) : file_path(file_path), fileSet(true) ,mtlExists(false) {
 }
 
-bool OBJLoader::setFile(std::string file_path){
-	//File already loaded (so we don't load the same data twice)
+bool OBJModel::setFile(std::string file_path){
+	//Specified file already loaded (validate so we don't load the same data again)
 	if (fileSet && this->file_path == file_path) {
 		return true;
 	}
@@ -27,7 +27,12 @@ bool OBJLoader::setFile(std::string file_path){
 	position_vertices.clear();
 	normal_vertices.clear();
 	texture_vertices.clear();
-	faces_indices.clear();
+	for (auto& it : meshes) {
+		it->faces_indices.clear();
+	}
+	meshes.clear();
+	mtl_file = "";
+	mtlExists = false;
 
 	//Set the file path
 	this->file_path = file_path;
@@ -37,7 +42,7 @@ bool OBJLoader::setFile(std::string file_path){
 	return success;
 }
 
-bool OBJLoader::parseFile(){
+bool OBJModel::parseFile(){
 	//File has not been set
 	if (!fileSet) {
 		std::cout << "File has not been set." << std::endl;
@@ -49,6 +54,7 @@ bool OBJLoader::parseFile(){
 	std::string line;
 	std::string flag;
 	std::vector<std::string> vertices_strings;
+	bool active_mtl = false;
 	FaceVertex tmp_face_1, tmp_face_2, tmp_face_3;
 	std::string tmp_string_1, tmp_string_2, tmp_string_3, tmp_string_ex;
 	glm::vec3 position_v, normal_v, texture_v;
@@ -62,6 +68,13 @@ bool OBJLoader::parseFile(){
 		return false;
 	}
 	while(std::getline(file,line)) {
+		flag = line.substr(0, 7);
+		if (flag == "mtllib ") {
+			std::istringstream data(line.substr(7));
+			data >> mtl_file;
+			mtl_file = "../models/" + mtl_file;
+			mtlExists = true;
+		}
 		flag = line.substr(0,2);
 		if(flag == "# ") {
 			std::istringstream data(line.substr(2));
@@ -91,9 +104,23 @@ bool OBJLoader::parseFile(){
 			//std::cout << "Normal vertex " << vertex_normal_index++ << " found: " << x << "," << y << "," << z << "\n";
 			texture_vertices.push_back(texture_v);
 		}
+		flag = line.substr(0, 7);
+		if (flag == "usemtl ") {
+			active_mtl = true;
+			meshes.push_back(std::make_shared<Mesh>());
+			std::istringstream data(line.substr(7));
+			std::cout << "Active material: " + data.str() << std::endl;
+			data >> meshes.back()->material;
+			//meshes.back()->material = active_mtl;
+		}
     	flag = line.substr(0,2);
     	if(flag == "f "){
-    		std::istringstream data(line.substr(2));
+			if (!active_mtl) {
+				std::cout << "Mesh with no material\n";
+				active_mtl = true;
+				meshes.push_back(std::make_shared<Mesh>());
+			}
+			std::istringstream data(line.substr(2));
 			//Considering non-triangular faces:
 			//Getting the first triangle
 			data >> tmp_string_1 >> tmp_string_2 >> tmp_string_3;
@@ -112,26 +139,28 @@ bool OBJLoader::parseFile(){
 			--tmp_face_1.position;
 			--tmp_face_2.position;
 			--tmp_face_3.position;
-			faces_indices.push_back(tmp_face_1.position);
-			faces_indices.push_back(tmp_face_2.position);
-			faces_indices.push_back(tmp_face_3.position);
+			
+			meshes.back()->faces_indices.push_back(tmp_face_1.position);
+			meshes.back()->faces_indices.push_back(tmp_face_2.position);
+			meshes.back()->faces_indices.push_back(tmp_face_3.position);
 
 			//Getting the rest of vertices, implementing a triangle fan, and pushing the rest of indices
 			while (data >> tmp_string_ex) {
 				tmp_face_2 = tmp_face_3;
 				tmp_face_3 = getFaceVertex(tmp_string_ex);
 				--tmp_face_3.position;
-				faces_indices.push_back(tmp_face_1.position);
-				faces_indices.push_back(tmp_face_2.position);
-				faces_indices.push_back(tmp_face_3.position);
+				meshes.back()->faces_indices.push_back(tmp_face_1.position);
+				meshes.back()->faces_indices.push_back(tmp_face_2.position);
+				meshes.back()->faces_indices.push_back(tmp_face_3.position);
 			}
+
 		}
     }
 	file.close();
 	return true;
 }
 
-FaceVertex OBJLoader::getFaceVertex(std::string data){
+FaceVertex OBJModel::getFaceVertex(std::string data){
 	FaceVertex value;
 	bool position = false;
 	bool texture = false;
@@ -172,40 +201,149 @@ FaceVertex OBJLoader::getFaceVertex(std::string data){
 	return value;
 }
 
-bool OBJLoader::load() {
+bool OBJModel::load() {
 	// First we parse the set file
+	parseMtl();
 	bool success = parseFile();
 	if (!success) {
 		return success;
 	}
 
-	//Generate and bind VBO, VAO and EBO
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
-
+	
+	//Generate and bind VBO, VAO and EBO
+	for (auto& it : meshes) {
+		glGenBuffers(1, &(it->EBO));
+	}
 	glBindVertexArray(VAO);
-
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, position_vertices.size() * sizeof(glm::vec3), &position_vertices[0], GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, faces_indices.size() * sizeof(unsigned int), &faces_indices[0], GL_STATIC_DRAW);
-
+	for (auto& it : meshes) {
+		
+	}
 	// Position attribute in VBO
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
+	//glBindVertexArray(0);
+	
 	return success;
 }
 
-void OBJLoader::render() {
+void OBJModel::render() {
 	//Render VAO
 	glBindVertexArray(VAO);
-	glDrawElements(GL_TRIANGLES, faces_indices.size(), GL_UNSIGNED_INT, 0);
+	unsigned int total_data = 0;
+	for (auto& it : meshes) {
+		std::cout << "Rendering " << it->material << std::endl;
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, it->EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, it->faces_indices.size() * sizeof(unsigned int), &((it->faces_indices)[0]), GL_STATIC_DRAW);
+		glDrawElements(GL_TRIANGLES, it->faces_indices.size(), GL_UNSIGNED_INT, 0);
+	}
 	glBindVertexArray(0);
 }
 
-OBJLoader::~OBJLoader() {
+OBJModel::~OBJModel() {	
 	// Deallocate resources (VAO,VBO)
-	glDeleteVertexArrays(1, &VAO);
-	glDeleteBuffers(1, &VBO);
+	//for (auto& it : meshes) {
+		glDeleteVertexArrays(1, &VAO);
+		glDeleteBuffers(1, &VBO);
+	//}
+}
+
+bool OBJModel::parseMtl() {
+	if (!mtlExists) {
+		std::cout << "No mtl file to load." << std::endl;
+		return false;
+	}
+	std::cout << "Mtl File: " + mtl_file << "\n";
+	//Needed variables
+	std::ifstream file(mtl_file.c_str());
+	std::string line;
+	std::string flag;
+	std::string tmp;
+	std::string tmp_name;
+	float Ns;
+	glm::vec3 Ka;
+	glm::vec3 Kd;
+	glm::vec3 Ks;
+	glm::vec3 Ke;
+	float Ni;
+	float d;
+	float illum;
+	bool newmtl;
+
+	if (file.fail()) {
+		std::cout << "Mtl file " + mtl_file + " could not be opened." << std::endl;
+		return false;
+	}
+
+	while (std::getline(file, line)) {
+		flag = line.substr(0, 7);
+		if (flag == "newmtl ") {
+			std::istringstream data(line.substr(7));
+			data >> tmp_name;
+			std::cout << "New material found: " + tmp_name << std::endl;
+			
+			std::getline(file, line);
+			flag = line.substr(0, 3);
+			if (flag == "Ns ") {
+				std::istringstream data(line.substr(3));
+				data >> Ns;
+				std::cout << "Ns: " << Ns << "\n";
+			}
+			std::getline(file, line);
+			flag = line.substr(0, 3);
+			if (flag == "Ka ") {
+				std::istringstream data(line.substr(3));
+				std::cout << "Ka: " << data.str() << "\n";
+				data >> Ka.x >> Ka.y >> Ka.z;
+			}
+			std::getline(file, line);
+			flag = line.substr(0, 3);
+			if (flag == "Kd ") {
+				std::istringstream data(line.substr(3));
+				std::cout << "Kd: " << data.str() << "\n";
+				data >> Kd.x >> Kd.y >> Ka.z;
+			}
+			std::getline(file, line);
+			flag = line.substr(0, 3);
+			if (flag == "Ks ") {
+				std::istringstream data(line.substr(3));
+				std::cout << "Ks: " << data.str() << "\n";
+				data >> Ks.x >> Ks.y >> Ks.z;
+			}
+			std::getline(file, line);
+			flag = line.substr(0, 3);
+			if (flag == "Ke ") {
+				std::istringstream data(line.substr(3));
+				std::cout << "Ke: " << data.str() << "\n";
+				data >> Ke.x >> Ke.y >> Ke.z;
+			}
+			std::getline(file, line);
+			flag = line.substr(0, 3);
+			if (flag == "Ni ") {
+				std::istringstream data(line.substr(3));
+				data >> Ni;
+				std::cout << "Ni: " << Ni << "\n";
+			}
+			std::getline(file, line);
+			flag = line.substr(0, 2);
+			if (flag == "d ") {
+				std::istringstream data(line.substr(2));
+				data >> d;
+				std::cout << "d: " << d << "\n";
+			}
+			std::getline(file, line);
+			flag = line.substr(0, 6);
+			if (flag == "illum ") {
+				std::istringstream data(line.substr(6));
+				data >> illum;
+				std::cout << "illum: " << illum << "\n";
+			}
+			materials[tmp_name] = Material(Ns, Ka, Kd, Ks, Ke, Ni, d, illum);
+		}
+	}
+	file.close();
+	return true;
 }

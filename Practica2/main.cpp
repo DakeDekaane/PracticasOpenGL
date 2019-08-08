@@ -8,7 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Shader.h"
-#include "OBJLoader.h"
+#include "OBJModel.h"
 
 #include <iostream>
 
@@ -36,7 +36,7 @@ int main() {
 	
 	//OBJ file variables
 	std::string file_name;
-	OBJLoader loader;
+	OBJModel loader;
 
 	while (file_name != "exit") {
 
